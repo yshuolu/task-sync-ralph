@@ -1,0 +1,18 @@
+{
+  "branch_name": "fn-1-lark-tasksync-daemon",
+  "completion_review_status": "unknown",
+  "completion_reviewed_at": null,
+  "created_at": "2026-03-05T08:12:05.383432Z",
+  "default_impl": null,
+  "default_review": null,
+  "default_sync": null,
+  "depends_on_epics": [],
+  "id": "fn-1-lark-tasksync-daemon",
+  "next_task": 1,
+  "plan_review_status": "unknown",
+  "plan_reviewed_at": null,
+  "spec_path": ".flow/specs/fn-1-lark-tasksync-daemon.md",
+  "status": "open",
+  "title": "Lark TaskSync Daemon",
+  "updated_at": "2026-03-05T08:13:13.082025Z"
+}
