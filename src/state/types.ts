@@ -4,7 +4,7 @@
  * have been synced to flow-next epics.
  */
 
-export type SyncStatus = "synced" | "failed";
+export type SyncStatus = "synced" | "pending_plan" | "failed" | "skipped";
 
 export interface SyncedTaskEntry {
   /** Lark task GUID */

@@ -48,6 +48,11 @@ export function diffTasks(
         });
       } else if (existing.syncStatus === "synced") {
         alreadySyncedCount++;
+      } else if (existing.syncStatus === "pending_plan") {
+        // Planning is in progress — skip, don't re-enqueue
+        alreadySyncedCount++;
+      } else if (existing.syncStatus === "skipped") {
+        permanentlyFailedCount++;
       } else if (existing.syncStatus === "failed") {
         if (existing.failureCount < maxRetries) {
           // Retryable failure

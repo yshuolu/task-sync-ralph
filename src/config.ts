@@ -22,6 +22,7 @@ export interface PlanConfig {
   timeoutMs: number;
   maxRetries: number;
   claudeArgs: string;
+  dangerouslySkipPermissions: boolean;
 }
 
 export interface TaskSyncConfig {
@@ -46,6 +47,7 @@ interface ConfigFileShape {
     timeoutMs?: number;
     maxRetries?: number;
     claudeArgs?: string;
+    dangerouslySkipPermissions?: boolean;
   };
   flowctlPath?: string;
 }
@@ -163,6 +165,10 @@ export function loadConfig(
   const claudeArgs =
     env.TASKSYNC_CLAUDE_ARGS ?? file.plan?.claudeArgs ?? "";
 
+  const dangerouslySkipPermissions =
+    env.TASKSYNC_SKIP_PERMISSIONS === "true" ||
+    (file.plan?.dangerouslySkipPermissions ?? false);
+
   // --- flowctl path ---
   const flowctlPath = env.FLOWCTL_PATH ?? file.flowctlPath ?? ".flow/bin/flowctl";
 
@@ -181,6 +187,7 @@ export function loadConfig(
       timeoutMs,
       maxRetries,
       claudeArgs,
+      dangerouslySkipPermissions,
     },
     flowctlPath,
   };

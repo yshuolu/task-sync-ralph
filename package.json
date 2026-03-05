@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@larksuiteoapi/node-sdk": "^1.40.0",
+    "p-queue": "^9.1.0",
     "proper-lockfile": "^4.1.2",
     "write-file-atomic": "^7.0.1"
   },

@@ -13,6 +13,7 @@ import { StateStore } from "../state/store.js";
 import type { SyncedTaskEntry } from "../state/types.js";
 import { diffTasks } from "./differ.js";
 import type { TaskToSync } from "./types.js";
+import { PlanQueue, type PlanQueueOptions } from "../planner/queue.js";
 
 const INITIAL_BACKOFF_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_BACKOFF_MS = 60 * 60 * 1000; // 60 minutes
@@ -23,6 +24,7 @@ export class Poller {
   private larkClient: LarkClient;
   private flowctlClient: FlowctlClient;
   private stateStore: StateStore;
+  private planQueue: PlanQueue;
   private timer: ReturnType<typeof setTimeout> | null = null;
   private running = false;
   private consecutiveErrors = 0;
@@ -32,6 +34,17 @@ export class Poller {
     this.larkClient = new LarkClient(config.lark);
     this.flowctlClient = new FlowctlClient(config.flowctlPath);
     this.stateStore = new StateStore(statePath);
+
+    const planQueueOptions: PlanQueueOptions = {
+      concurrency: config.plan.concurrency,
+      maxRetries: config.plan.maxRetries,
+      bridgeOptions: {
+        timeoutMs: config.plan.timeoutMs,
+        extraArgs: config.plan.claudeArgs,
+        dangerouslySkipPermissions: config.plan.dangerouslySkipPermissions,
+      },
+    };
+    this.planQueue = new PlanQueue(this.stateStore, planQueueOptions);
   }
 
   /** Start the polling loop. */
@@ -46,13 +59,14 @@ export class Poller {
     void this.tick();
   }
 
-  /** Stop the polling loop. */
-  stop(): void {
+  /** Stop the polling loop and shut down the plan queue. */
+  async stop(): Promise<void> {
     this.running = false;
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = null;
     }
+    await this.planQueue.shutdown();
   }
 
   /** Schedule the next tick with drift protection. */
@@ -137,31 +151,51 @@ export class Poller {
     this.scheduleNext();
   }
 
-  /** Sync a single task: create a flow-next epic and update state. */
+  /** Sync a single task: create a flow-next epic, enqueue plan job, and update state. */
   private async syncTask(item: TaskToSync): Promise<void> {
     const summary = item.task.summary ?? "(untitled)";
     const now = new Date().toISOString();
 
     try {
-      const epicId = await this.flowctlClient.epicCreate(summary);
-      console.log(
-        `Created epic ${epicId} for Lark task ${item.taskGuid}: "${summary}"`
-      );
+      // For retries where epic already exists, skip epic creation
+      const existing = this.stateStore.getTask(item.taskGuid);
+      let epicId: string;
 
+      if (existing?.epicId) {
+        epicId = existing.epicId;
+        console.log(
+          `Reusing existing epic ${epicId} for Lark task ${item.taskGuid}: "${summary}"`
+        );
+      } else {
+        epicId = await this.flowctlClient.epicCreate(summary);
+        console.log(
+          `Created epic ${epicId} for Lark task ${item.taskGuid}: "${summary}"`
+        );
+      }
+
+      // Mark as pending_plan and enqueue the planning job
       const entry: SyncedTaskEntry = {
         taskGuid: item.taskGuid,
         tasklistGuid: item.tasklistGuid,
         summary,
         epicId,
-        syncStatus: "synced",
+        syncStatus: "pending_plan",
         firstSeenAt: item.isRetry
-          ? (this.stateStore.getTask(item.taskGuid)?.firstSeenAt ?? now)
+          ? (existing?.firstSeenAt ?? now)
           : now,
         lastSyncAt: now,
-        failureCount: 0,
+        failureCount: existing?.failureCount ?? 0,
       };
 
       this.stateStore.setTask(item.taskGuid, entry);
+
+      // Enqueue the plan job — the queue will update state on completion
+      this.planQueue.enqueue({
+        epicId,
+        larkTaskGuid: item.taskGuid,
+        larkSummary: summary,
+        // LarkTask doesn't have description in the current type, but summary is available
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error(
@@ -188,5 +222,10 @@ export class Poller {
   /** Expose state store for testing/inspection. */
   getStateStore(): StateStore {
     return this.stateStore;
+  }
+
+  /** Expose plan queue for testing/inspection. */
+  getPlanQueue(): PlanQueue {
+    return this.planQueue;
   }
 }
