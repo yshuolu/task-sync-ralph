@@ -29,6 +29,9 @@ export class Poller {
   private running = false;
   private consecutiveErrors = 0;
 
+  /** Optional callback invoked after each tick completes (success or failure). */
+  onTickComplete: (() => void) | null = null;
+
   constructor(config: TaskSyncConfig, statePath?: string) {
     this.config = config;
     this.larkClient = new LarkClient(config.lark);
@@ -148,6 +151,7 @@ export class Poller {
       );
     }
 
+    this.onTickComplete?.();
     this.scheduleNext();
   }
 

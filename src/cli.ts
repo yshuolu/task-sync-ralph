@@ -5,14 +5,17 @@
  *
  * Usage:
  *   npx tsx src/cli.ts discover    - List available Lark tasklists
- *   npx tsx src/cli.ts start       - Start the daemon (future)
- *   npx tsx src/cli.ts stop        - Stop the daemon (future)
- *   npx tsx src/cli.ts status      - Check daemon status (future)
- *   npx tsx src/cli.ts sync-once   - One-shot sync (future)
+ *   npx tsx src/cli.ts start       - Start the daemon (foreground)
+ *   npx tsx src/cli.ts stop        - Stop the daemon
+ *   npx tsx src/cli.ts status      - Check daemon status
+ *   npx tsx src/cli.ts sync-once   - One-shot sync cycle
  */
 
+import { unlinkSync } from "node:fs";
 import { loadConfig } from "./config.js";
 import { LarkClient } from "./lark/client.js";
+import { Daemon, readPid, isProcessAlive, getPidFilePath } from "./daemon.js";
+import { readHealth } from "./health.js";
 
 const COMMANDS = ["discover", "start", "stop", "status", "sync-once"] as const;
 type Command = (typeof COMMANDS)[number];
@@ -22,10 +25,10 @@ function printUsage(): void {
   console.log("Usage: npx tsx src/cli.ts <command>\n");
   console.log("Commands:");
   console.log("  discover    List available Lark tasklists and their GUIDs");
-  console.log("  start       Start the sync daemon (not yet implemented)");
-  console.log("  stop        Stop the sync daemon (not yet implemented)");
-  console.log("  status      Check daemon status (not yet implemented)");
-  console.log("  sync-once   Run a single sync cycle (not yet implemented)");
+  console.log("  start       Start the sync daemon (foreground)");
+  console.log("  stop        Stop the sync daemon");
+  console.log("  status      Check daemon status");
+  console.log("  sync-once   Run a single sync cycle");
 }
 
 async function discoverCommand(): Promise<void> {
@@ -83,6 +86,92 @@ async function discoverCommand(): Promise<void> {
   );
 }
 
+function startCommand(): void {
+  console.log("Validating configuration...");
+  const config = loadConfig();
+  console.log("Configuration valid.\n");
+
+  const daemon = new Daemon(config);
+  daemon.start();
+}
+
+function stopCommand(): void {
+  const pid = readPid();
+
+  if (pid === null) {
+    console.log("No daemon is running (PID file not found).");
+    process.exit(0);
+  }
+
+  if (!isProcessAlive(pid)) {
+    console.log(`Daemon (PID ${pid}) is not running. Cleaning up stale PID file.`);
+    try {
+      unlinkSync(getPidFilePath());
+    } catch {
+      // ignore
+    }
+    process.exit(0);
+  }
+
+  console.log(`Sending SIGTERM to daemon (PID ${pid})...`);
+  process.kill(pid, "SIGTERM");
+  console.log("Stop signal sent.");
+}
+
+function statusCommand(): void {
+  const pid = readPid();
+  const health = readHealth();
+
+  const alive = pid !== null && isProcessAlive(pid);
+
+  console.log("TaskSync Daemon Status\n");
+  console.log(`  Running:    ${alive ? `yes (PID ${pid})` : "no"}`);
+
+  if (health) {
+    console.log(`  Last poll:  ${health.lastPoll ?? "never"}`);
+    console.log(`  Next poll:  ${health.nextPoll ?? "unknown"}`);
+    console.log(`  Synced:     ${health.syncedCount}`);
+    console.log(`  Pending:    ${health.pendingCount}`);
+    console.log(`  Failed:     ${health.failedCount}`);
+    console.log(`  Uptime:     ${formatUptime(health.uptime)}`);
+  } else {
+    console.log("  No health data available.");
+  }
+}
+
+function formatUptime(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m < 60) return `${m}m ${s}s`;
+  const h = Math.floor(m / 60);
+  const rm = m % 60;
+  return `${h}h ${rm}m`;
+}
+
+async function syncOnceCommand(): Promise<void> {
+  console.log("Validating configuration...");
+  const config = loadConfig();
+  console.log("Configuration valid.\n");
+
+  console.log("Running single sync cycle...\n");
+
+  const daemon = new Daemon(config);
+  const poller = daemon.getPoller();
+
+  // Wait for one tick to complete, then stop
+  await new Promise<void>((resolve) => {
+    poller.onTickComplete = () => {
+      resolve();
+    };
+    poller.start();
+  });
+
+  await poller.stop();
+  await poller.getStateStore().save();
+  console.log("\nSync-once complete.");
+}
+
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
@@ -105,12 +194,19 @@ async function main(): Promise<void> {
       break;
 
     case "start":
+      startCommand();
+      break;
+
     case "stop":
+      stopCommand();
+      break;
+
     case "status":
+      statusCommand();
+      break;
+
     case "sync-once":
-      console.log(`Command "${command}" is not yet implemented.`);
-      console.log("This will be added in a future task.");
-      process.exit(0);
+      await syncOnceCommand();
       break;
   }
 }

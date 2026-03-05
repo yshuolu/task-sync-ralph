@@ -35,6 +35,11 @@ Create project documentation (README, CLAUDE.md project section) and integration
 - Integration tests should use the actual `flowctl` binary for epic operations (not mock it) to validate the real integration
 - Mock the Lark SDK at the HTTP level or use the SDK's test utilities
 - Mock `claude -p` by putting a stub script on PATH that mimics the expected `--output-format json` response
+<!-- Updated by plan-sync: fn-1-lark-tasksync-daemon.3 — planner architecture details for testing -->
+- `ClaudeBridge` (from `src/planner/bridge.ts`) spawns `claude -p` with args: `-p <prompt> --output-format json --max-turns 50` (plus optional `--dangerously-skip-permissions`). The mock stub script should accept these flags and output valid JSON (`{ "result": "..." }`) to stdout with exit code 0 for success, or non-zero exit code for failure
+- `PlanQueue` (from `src/planner/queue.ts`) uses `p-queue` with configurable concurrency. It updates `SyncedTaskEntry.syncStatus` in `StateStore`: to `"synced"` on success, `"failed"` on failure (with `failureCount` incremented). Tasks with `failureCount >= maxRetries` are silently skipped (no further processing)
+- The `Poller` (from `src/sync/poller.ts`) is the top-level entry point for integration tests — it orchestrates LarkClient, FlowctlClient, StateStore, and PlanQueue. Use `new Poller(config, statePath)` and call its `start()`/`stop()` methods. Access internal state via `poller.getStateStore()` and `poller.getPlanQueue()`
+- For graceful shutdown testing, call `poller.stop()` which internally calls `planQueue.shutdown()` -> `bridge.killAll()` (sends SIGTERM then SIGKILL to active claude child processes)
 ## Acceptance
 - [ ] README.md covers setup, configuration, usage, and troubleshooting
 - [ ] CLAUDE.md has project-specific section with architecture and conventions

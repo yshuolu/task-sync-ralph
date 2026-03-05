@@ -39,9 +39,8 @@ Build the module that invokes `claude -p` in headless mode to trigger `/flow-nex
 - [ ] Tasks exceeding max retries marked as `skipped`
 - [ ] No zombie claude processes after timeout or shutdown
 ## Done summary
-TBD
-
+Built the Claude planning bridge module that spawns `claude -p` in headless mode for each new epic, with a p-queue-based job queue (configurable concurrency), wall-clock timeout via AbortController, child PID tracking for zombie prevention, and retry/skip logic integrated with the sync state store.
 ## Evidence
-- Commits:
-- Tests:
+- Commits: 4c867e74508eea444c237b739f375b223b8d1d9f
+- Tests: npx tsc --noEmit, npm test
 - PRs:
