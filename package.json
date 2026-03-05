@@ -11,7 +11,7 @@
     "stop": "tsx src/cli.ts stop",
     "sync-once": "tsx src/cli.ts sync-once",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"No tests yet\" && exit 0"
+    "test": "node --import tsx/esm --test tests/**/*.test.ts"
   },
   "engines": {
     "node": ">=22.0.0"

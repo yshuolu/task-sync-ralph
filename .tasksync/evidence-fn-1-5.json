@@ -1,0 +1,19 @@
+{
+  "tests": {
+    "command": "npm test",
+    "passed": 13,
+    "failed": 0,
+    "suites": 5,
+    "duration_ms": 548
+  },
+  "files_created": [
+    "README.md",
+    "tests/sync.test.ts",
+    "tests/helpers/mock-lark.ts",
+    "tests/helpers/mock-claude.sh"
+  ],
+  "files_modified": [
+    "CLAUDE.md",
+    "package.json"
+  ]
+}
