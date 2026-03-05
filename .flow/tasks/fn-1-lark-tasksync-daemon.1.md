@@ -37,9 +37,8 @@ Initialize the TypeScript/Node.js project and build the Lark API client module.
 - [ ] Config module validates required values at startup
 - [ ] Git repo initialized with initial commit
 ## Done summary
-TBD
-
+Scaffolded TypeScript/Node.js project with ESM, Lark SDK integration, layered config module with validation, and discover CLI command for listing Lark tasklists.
 ## Evidence
-- Commits:
-- Tests:
+- Commits: 61471987abf99932d428b802a5f4a6951c6f8f20
+- Tests: npx tsc --noEmit, npx tsx src/cli.ts --help, npx tsx src/cli.ts discover (config validation test)
 - PRs:

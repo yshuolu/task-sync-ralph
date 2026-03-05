@@ -1,0 +1,17 @@
+{
+  "typecheck": "tsc --noEmit passes with zero errors",
+  "files_created": [
+    "src/flowctl/client.ts",
+    "src/state/store.ts",
+    "src/state/types.ts",
+    "src/sync/differ.ts",
+    "src/sync/types.ts",
+    "src/sync/poller.ts"
+  ],
+  "dependencies_added": [
+    "write-file-atomic",
+    "proper-lockfile",
+    "@types/write-file-atomic",
+    "@types/proper-lockfile"
+  ]
+}

@@ -26,6 +26,10 @@ Build daemon lifecycle management (signals, PID file, health) and CLI commands f
 
 ## Key context
 
+<!-- Updated by plan-sync: fn-1-lark-tasksync-daemon.1 CLI structure uses COMMANDS array and switch pattern -->
+- Existing CLI in `src/cli.ts` uses a `COMMANDS` array (`["discover", "start", "stop", "status", "sync-once"] as const`), a `Command` type, and a `switch` statement in `main()`. Extend by adding case handlers (stubs for `start`/`stop`/`status`/`sync-once` already exist and print "not yet implemented")
+- `loadConfig()` from `src/config.ts` accepts `{ requireTasklists?: boolean }` option -- daemon startup should call `loadConfig()` (default requires tasklist GUIDs). Config returns `TaskSyncConfig` with `lark`, `poll`, `plan` sub-objects and `flowctlPath`
+- SIGHUP reload: call `loadConfig()` again to re-read `.tasksync/config.json` and env vars
 - Do NOT run via `npm start` in production — npm swallows signals. Use `npx tsx src/cli.ts start` or `node dist/cli.js start` directly
 - PID file must be cleaned up on both normal and abnormal exit (use `process.on('exit', ...)`)
 - The forced-exit timeout (`setTimeout(...).unref()`) ensures the daemon doesn't hang on stuck cleanup
