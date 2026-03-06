@@ -31,22 +31,29 @@ function printUsage(): void {
   console.log("  sync-once   Run a single sync cycle");
 }
 
-async function discoverCommand(): Promise<void> {
-  console.log("Discovering Lark tasklists...\n");
-
-  // discover does not require tasklist GUIDs (that's what we're discovering)
+async function discoverCommand(guidsOnly: boolean): Promise<void> {
   const config = loadConfig({ requireTasklists: false });
   const client = new LarkClient(config.lark);
 
   const tasklists = await client.listTasklists();
 
   if (tasklists.length === 0) {
-    console.log(
-      "No tasklists found. Ensure the Lark app has been granted access to tasklists."
-    );
-    console.log(
-      "Check that the app has the 'task:tasklist:read' scope enabled."
-    );
+    if (!guidsOnly) {
+      console.log(
+        "No tasklists found. Ensure the Lark app has been granted access to tasklists."
+      );
+      console.log(
+        "Check that the app has the 'task:tasklist:read' scope enabled."
+      );
+    }
+    return;
+  }
+
+  if (guidsOnly) {
+    const guids = tasklists
+      .map((tl) => tl.guid)
+      .filter((g): g is string => !!g);
+    console.log(guids.join(","));
     return;
   }
 
@@ -190,7 +197,7 @@ async function main(): Promise<void> {
 
   switch (command) {
     case "discover":
-      await discoverCommand();
+      await discoverCommand(args.includes("--guids-only"));
       break;
 
     case "start":
