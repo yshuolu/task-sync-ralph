@@ -34,7 +34,7 @@ if [ -z "${LARK_TASKLIST_GUIDS:-}" ]; then
   echo "No LARK_TASKLIST_GUIDS set. Discovering all tasklists..."
   echo ""
 
-  guids=$(npx tsx src/cli.ts discover --guids-only)
+  guids=$(npx tsx src/cli.ts discover --guids-only 2>/dev/null)
 
   if [ -z "$guids" ]; then
     echo "Error: No tasklists found. Check your Lark app permissions."

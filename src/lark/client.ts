@@ -26,6 +26,13 @@ function createSdkClient(config: LarkConfig): InstanceType<typeof lark.Client> {
     appId: config.appId,
     appSecret: config.appSecret,
     domain,
+    logger: {
+      info: (...args: unknown[]) => console.error("[lark:info]", ...args),
+      warn: (...args: unknown[]) => console.error("[lark:warn]", ...args),
+      error: (...args: unknown[]) => console.error("[lark:error]", ...args),
+      debug: (...args: unknown[]) => console.error("[lark:debug]", ...args),
+      trace: (...args: unknown[]) => console.error("[lark:trace]", ...args),
+    },
   });
 }
 
