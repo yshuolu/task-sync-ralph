@@ -116,11 +116,11 @@ export class LarkClient {
    * Fetch tasks from all configured tasklists.
    * Returns a map from tasklist GUID to its tasks.
    */
-  async fetchAllTasks(): Promise<Map<string, LarkTask[]>> {
+  async fetchAllTasks(options?: { completed?: boolean }): Promise<Map<string, LarkTask[]>> {
     const result = new Map<string, LarkTask[]>();
 
     for (const guid of this.config.tasklistGuids) {
-      const tasks = await this.fetchTasks(guid);
+      const tasks = await this.fetchTasks(guid, options);
       result.set(guid, tasks);
     }
 

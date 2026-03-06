@@ -114,8 +114,8 @@ export class Poller {
         // Reload state in case another process modified it
         this.stateStore.load();
 
-        // Fetch all tasks from Lark
-        const tasksByTasklist = await this.larkClient.fetchAllTasks();
+        // Fetch only uncompleted tasks from Lark
+        const tasksByTasklist = await this.larkClient.fetchAllTasks({ completed: false });
 
         // Diff against state
         const diff = diffTasks(
